@@ -1,0 +1,260 @@
+{% extends 'attendance/base.html' %}
+
+{% block content %}
+<div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
+
+    {% if status == 'checkin' %}
+    <!-- ✅ Check-In Success Screen -->
+    <div class="mb-6 flex justify-center text-green-500">
+        <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    </div>
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">Welcome, {{ identifier }}!</h2>
+    <p class="text-gray-600 mb-8">Your check-in is successful.</p>
+    <a href="/"
+        class="w-full inline-block bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200">Back
+        to Home</a>
+
+    {% elif status == 'checkout' %}
+    <!-- 👋 Check-Out Success Screen -->
+    <div class="mb-6 flex justify-center text-blue-500">
+        <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    </div>
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">Goodbye, {{ identifier }}!</h2>
+    <p class="text-gray-600 mb-8">Your check-out is successful.</p>
+    <a href="/"
+        class="w-full inline-block bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200">Back
+        to Home</a>
+
+    {% elif status == 'error' %}
+    <!-- ❌ Error Screen -->
+    <div class="mb-6 flex justify-center text-red-500">
+        <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+    </div>
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">Error</h2>
+    {% if messages %}
+    {% for message in messages %}
+    <p class="text-gray-600 mb-8">{{ message }}</p>
+    {% endfor %}
+    {% endif %}
+    <a href="/"
+        class="w-full inline-block bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200">Try
+        Again</a>
+
+    {% elif status == 'conflict' %}
+    <!-- ⚠️ Conflict Screen -->
+    <div class="mb-4 flex justify-center text-yellow-500">
+        <svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">Hold on!</h2>
+
+    {% if conflict_type == 'id' %}
+    <p class="text-gray-600 mb-1">Someone with ID <strong>{{ entered_id }}</strong> is already checked in as:</p>
+    <p class="text-xl font-bold text-yellow-600 mb-4">{{ conflict_name }}</p>
+    {% elif conflict_type == 'name' %}
+    <p class="text-gray-600 mb-1">Someone named <strong>{{ conflict_name }}</strong> is already checked in with ID:</p>
+    <p class="text-xl font-bold text-yellow-600 mb-4">{{ conflict_id }}</p>
+    {% endif %}
+
+    <p class="text-gray-500 text-sm mb-6">Is that you?</p>
+
+    <div class="space-y-3">
+        <!-- Yes, that's me = they're already checked in -->
+        <a href="/"
+            class="w-full inline-block bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+            Yes, that's me (I'm already checked in)
+        </a>
+
+        <!-- No, I'm a different person = force the check-in -->
+        <form method="POST" action="{% url 'checkin' %}">
+            {% csrf_token %}
+            <input type="hidden" name="student_id" value="{{ entered_id }}">
+            <input type="hidden" name="student_name" value="{{ entered_name }}">
+            <input type="hidden" name="force_checkin" value="yes">
+            <button type="submit"
+                class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 shadow-md">
+                No, I'm a different person — Check me in
+            </button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- 🏠 Main Choice Screen -->
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">School Library</h1>
+    <p class="text-gray-500 mb-8">What would you like to do?</p>
+
+    <div class="space-y-4">
+        {% if is_open %}
+        <button onclick="document.getElementById('checkin-section').classList.remove('hidden'); document.getElementById('choice-section').classList.add('hidden');"
+            class="w-full bg-green-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-green-700 transition duration-200 shadow-md text-lg flex items-center justify-center gap-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+            </svg>
+            Check In
+        </button>
+        {% else %}
+        <div class="w-full bg-red-50 text-red-700 font-bold py-4 px-4 rounded-xl border border-red-200 shadow-inner text-lg flex flex-col items-center justify-center gap-2">
+            <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            <span>Library is Currently Closed</span>
+            <span class="text-sm font-normal">Check-in is disabled until the librarian opens.</span>
+        </div>
+        {% endif %}
+        <button onclick="document.getElementById('checkout-section').classList.remove('hidden'); document.getElementById('choice-section').classList.add('hidden');"
+            class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 transition duration-200 shadow-md text-lg flex items-center justify-center gap-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            Check Out
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ================================================ -->
+<!-- CHECK-IN FORM (Hidden by default, shown via JS) -->
+<!-- ================================================ -->
+<div id="checkin-section" class="hidden w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Check In</h2>
+    <form method="POST" action="{% url 'checkin' %}" class="space-y-5">
+        {% csrf_token %}
+        <div>
+            <label for="student_id" class="block text-left text-sm font-medium text-gray-700 mb-1">Student ID</label>
+            <input type="text" id="student_id" name="student_id" required autofocus
+                minlength="8" maxlength="8" pattern="\d{8}" title="Student ID must be exactly 8 digits"
+                oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-center tracking-widest placeholder-gray-400"
+                placeholder="e.g. 20952040">
+        </div>
+        <div>
+            <label for="student_name" class="block text-left text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input type="text" id="student_name" name="student_name" required
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-center placeholder-gray-400"
+                placeholder="e.g. John Doe">
+        </div>
+        <button type="submit"
+            class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 shadow-md">
+            Confirm Check In
+        </button>
+    </form>
+    <button onclick="document.getElementById('checkin-section').classList.add('hidden'); document.getElementById('choice-section').classList.remove('hidden');"
+        class="mt-4 text-sm text-gray-500 hover:text-gray-800 underline">← Back</button>
+</div>
+
+<!-- ================================================== -->
+<!-- CHECK-OUT LIST (Hidden by default, shown via JS)   -->
+<!-- ================================================== -->
+<div id="checkout-section" class="hidden w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Check Out</h2>
+    <p class="text-gray-500 text-sm mb-4">Tap your name to check out.</p>
+
+    <!-- Search/Filter Bar -->
+    <input type="text" id="search-bar" oninput="filterNames()"
+        class="w-full px-4 py-3 mb-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+        placeholder="Search your name...">
+
+    <div id="student-list" class="space-y-3 max-h-80 overflow-y-auto">
+        {% if active_logs %}
+            {% for log in active_logs %}
+            <button type="button" onclick="openModal('{{ log.student_name }}', '{{ log.identifier }}', '{{ log.id }}')"
+                class="student-card w-full text-left bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-400 rounded-xl px-5 py-4 transition duration-200 flex justify-between items-center group">
+                <div>
+                    <p class="font-semibold text-gray-800 group-hover:text-blue-700 student-name">{{ log.student_name }}</p>
+                    <p class="text-xs text-gray-400">ID: {{ log.identifier }}</p>
+                </div>
+                <svg class="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7"></path>
+                </svg>
+            </button>
+            {% endfor %}
+        {% else %}
+            <p class="text-gray-400 italic py-6">No one is currently checked in.</p>
+        {% endif %}
+    </div>
+
+    <button onclick="document.getElementById('checkout-section').classList.add('hidden'); document.getElementById('choice-section').classList.remove('hidden');"
+        class="mt-6 text-sm text-gray-500 hover:text-gray-800 underline">← Back</button>
+</div>
+
+<!-- ================================ -->
+<!-- CONFIRMATION MODAL               -->
+<!-- ================================ -->
+<div id="checkout-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center transform transition-all">
+        <div class="mb-4 flex justify-center text-blue-500">
+            <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-1">Confirm Check Out</h3>
+        <p class="text-gray-500 mb-1">Are you sure you want to check out?</p>
+        <p id="modal-student-name" class="text-lg font-semibold text-blue-700 mb-1"></p>
+        <p id="modal-student-id" class="text-sm text-gray-400 mb-6"></p>
+
+        <form id="modal-form" method="POST" action="{% url 'quick_checkout' %}">
+            {% csrf_token %}
+            <input type="hidden" id="modal-log-id" name="log_id" value="">
+            <div class="flex gap-3">
+                <button type="button" onclick="closeModal()"
+                    class="flex-1 bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-200 shadow-md">
+                    Yes, Check Out
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Wrap the choice buttons so JS can toggle them -->
+<script>
+    // Wrap the main choice section
+    document.addEventListener('DOMContentLoaded', function () {
+        const mainCard = document.querySelector('.w-full.max-w-md.bg-white');
+        if (mainCard && !mainCard.id) {
+            mainCard.id = 'choice-section';
+        }
+    });
+
+    // Filter student names in checkout list
+    function filterNames() {
+        const query = document.getElementById('search-bar').value.toLowerCase();
+        const cards = document.querySelectorAll('.student-card');
+        cards.forEach(card => {
+            const name = card.querySelector('.student-name').textContent.toLowerCase();
+            card.style.display = name.includes(query) ? '' : 'none';
+        });
+    }
+
+    // Modal functions
+    function openModal(name, identifier, logId) {
+        document.getElementById('modal-student-name').textContent = name;
+        document.getElementById('modal-student-id').textContent = 'ID: ' + identifier;
+        document.getElementById('modal-log-id').value = logId;
+        document.getElementById('checkout-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('checkout-modal').classList.add('hidden');
+    }
+
+    // Close modal if clicking outside
+    document.getElementById('checkout-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+</script>
+{% endblock %}

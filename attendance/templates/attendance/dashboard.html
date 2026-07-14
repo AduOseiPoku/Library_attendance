@@ -1,0 +1,341 @@
+{% extends 'attendance/base.html' %}
+
+{% block content %}
+<div class="w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden mt-8 mb-8">
+    <!-- Header -->
+    <div
+        class="bg-blue-600 px-8 py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center text-white gap-3">
+        <h2 class="text-2xl font-bold">Librarian Dashboard</h2>
+        <div class="flex flex-wrap gap-2 items-center">
+            <form method="POST" action="{% url 'dashboard' %}" class="inline m-0">
+                {% csrf_token %}
+                <input type="hidden" name="toggle_library" value="1">
+                {% if is_open %}
+                <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-400 transition shadow" onclick="return confirm('Close the library? This will prevent new check-ins.')">
+                    🔴 Close Library
+                </button>
+                {% else %}
+                <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-yellow-400 transition shadow" onclick="return confirm('Open the library? This will allow new check-ins.')">
+                    🟢 Open Library
+                </button>
+                {% endif %}
+            </form>
+            <span class="bg-blue-500 px-4 py-2 rounded-lg font-semibold shadow">Total Today: {{ total_today }}</span>
+            <span class="bg-blue-700 px-4 py-2 rounded-lg font-semibold shadow">Currently Inside: {{ currently_inside }}</span>
+            <a href="{% url 'export_csv' %}"
+                class="bg-green-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-400 transition shadow">📥
+                CSV</a>
+            <a href="{% url 'home' %}"
+                class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition shadow">Check-in
+                Page</a>
+            <a href="{% url 'dashboard_logout' %}"
+                class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-500 transition shadow">🔒
+                Logout</a>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="border-b border-gray-200 bg-gray-50">
+        <nav class="flex">
+            <button onclick="switchTab('attendance')" id="tab-attendance"
+                class="tab-btn px-6 py-3 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 transition">
+                📋 Attendance
+            </button>
+            <button onclick="switchTab('analytics')" id="tab-analytics"
+                class="tab-btn px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">
+                📊 Analytics
+            </button>
+        </nav>
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- TAB 1: ATTENDANCE                   -->
+    <!-- ═══════════════════════════════════ -->
+    <div id="panel-attendance" class="tab-panel p-8 space-y-12">
+
+        {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+            <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Active Logs Section -->
+        <section>
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 border-gray-200">Currently Inside (Active)
+            </h3>
+
+            {% if active_logs %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="p-4 border-b">Identifier</th>
+                            <th class="p-4 border-b">Time In</th>
+                            <th class="p-4 border-b text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700">
+                        {% for log in active_logs %}
+                        <tr class="hover:bg-gray-50 border-b">
+                            <td class="p-4 font-medium">{% if log.student_name %}{{ log.student_name }} ({{ log.identifier }}){% else %}{{ log.identifier }}{% endif %}</td>
+                            <td class="p-4">{{ log.timestamp_in|date:"M d, Y h:i A" }}</td>
+                            <td class="p-4 text-right">
+                                <form method="POST" action="{% url 'dashboard' %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="log_id" value="{{ log.id }}">
+                                    <button type="submit"
+                                        class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm rounded transition shadow">
+                                        Manual Check-out
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="bg-gray-50 p-6 text-center text-gray-500 rounded-lg italic">
+                No one is currently logged into the library.
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- Historical Logs Section -->
+        <section>
+            <div class="flex justify-between items-end mb-4 border-b pb-2 border-gray-200">
+                <h3 class="text-xl font-bold text-gray-800">Recent History (Completed)</h3>
+            </div>
+
+            {% if historical_logs %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="p-4 border-b">Identifier</th>
+                            <th class="p-4 border-b">Time In</th>
+                            <th class="p-4 border-b">Time Out</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700">
+                        {% for log in historical_logs %}
+                        <tr class="hover:bg-gray-50 border-b">
+                            <td class="p-4 font-medium">{% if log.student_name %}{{ log.student_name }} ({{ log.identifier }}){% else %}{{ log.identifier }}{% endif %}</td>
+                            <td class="p-4">{{ log.timestamp_in|date:"M d, Y h:i A" }}</td>
+                            <td class="p-4">{{ log.timestamp_out|date:"M d, Y h:i A" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="bg-gray-50 p-6 text-center text-gray-500 rounded-lg italic">
+                No historical logs available.
+            </div>
+            {% endif %}
+        </section>
+
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- TAB 2: ANALYTICS                    -->
+    <!-- ═══════════════════════════════════ -->
+    <div id="panel-analytics" class="tab-panel hidden p-8 bg-gray-50">
+
+        <!-- Stat Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-10">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-center">
+                <p class="text-3xl font-bold text-blue-600">{{ total_today }}</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Today</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-center">
+                <p class="text-3xl font-bold text-green-600">{{ currently_inside }}</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Inside Now</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-center">
+                <p class="text-3xl font-bold text-indigo-600">{{ total_this_week }}</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">This Week</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-center">
+                <p class="text-3xl font-bold text-purple-600">{{ total_this_month }}</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">This Month</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-center">
+                <p class="text-3xl font-bold text-orange-600">{{ avg_daily }}</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Avg/Day</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-center">
+                <p class="text-2xl font-bold text-teal-600">{{ avg_time_spent }}</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Avg Stay</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-center">
+                <p class="text-lg font-bold text-red-600">{{ peak_hour }}</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Peak Hour</p>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Visitors Per Day (Last 7 Days)</h3>
+                <canvas id="dailyChart" height="200"></canvas>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Hourly Traffic Today</h3>
+                <canvas id="hourlyChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Top 10 Frequent Visitors</h3>
+                <canvas id="topVisitorsChart" height="180"></canvas>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Busiest Days</h3>
+                <canvas id="dowChart" height="220"></canvas>
+            </div>
+        </div>
+
+        <!-- Charts Row 3 -->
+        <div class="grid grid-cols-1 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Average Visit Duration by Day (minutes)</h3>
+                <canvas id="durationChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Safely embed chart data as JSON, escaped, instead of dumping raw Python via |safe -->
+{{ daily_labels|json_script:"daily-labels-data" }}
+{{ daily_data|json_script:"daily-data-data" }}
+{{ hourly_labels|json_script:"hourly-labels-data" }}
+{{ hourly_data|json_script:"hourly-data-data" }}
+{{ top_labels|json_script:"top-labels-data" }}
+{{ top_data|json_script:"top-data-data" }}
+{{ dow_labels|json_script:"dow-labels-data" }}
+{{ dow_data|json_script:"dow-data-data" }}
+{{ avg_duration_labels|json_script:"avg-duration-labels-data" }}
+{{ avg_duration_data|json_script:"avg-duration-data-data" }}
+
+<script>
+    // ── Read JSON safely from the json_script tags above ──
+    function readJSON(id) {
+        const el = document.getElementById(id);
+        return el ? JSON.parse(el.textContent) : [];
+    }
+
+    const dailyLabels = readJSON('daily-labels-data');
+    const dailyData = readJSON('daily-data-data');
+    const hourlyLabels = readJSON('hourly-labels-data');
+    const hourlyData = readJSON('hourly-data-data');
+    const topLabels = readJSON('top-labels-data');
+    const topData = readJSON('top-data-data');
+    const dowLabels = readJSON('dow-labels-data');
+    const dowData = readJSON('dow-data-data');
+    const avgDurationLabels = readJSON('avg-duration-labels-data');
+    const avgDurationData = readJSON('avg-duration-data-data');
+
+    // ── Tab Switching ──
+    let chartsInitialized = false;
+    let chartInstances = {};
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('border-blue-600', 'text-blue-600');
+            b.classList.add('border-transparent', 'text-gray-500');
+        });
+        document.getElementById('panel-' + tab).classList.remove('hidden');
+        const activeTab = document.getElementById('tab-' + tab);
+        activeTab.classList.remove('border-transparent', 'text-gray-500');
+        activeTab.classList.add('border-blue-600', 'text-blue-600');
+
+        if (tab === 'analytics' && !chartsInitialized) {
+            if (typeof Chart === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+                script.onload = () => {
+                    initCharts();
+                    chartsInitialized = true;
+                };
+                document.body.appendChild(script);
+            } else {
+                initCharts();
+                chartsInitialized = true;
+            }
+        }
+    }
+
+    // ── Chart Initialization ──
+    function initCharts() {
+        Object.values(chartInstances).forEach(chart => chart.destroy());
+        chartInstances = {};
+
+        const colors = {
+            blue: 'rgba(59, 130, 246, 0.8)',
+            green: 'rgba(16, 185, 129, 0.8)',
+            greenBg: 'rgba(16, 185, 129, 0.15)',
+            purple: 'rgba(139, 92, 246, 0.8)',
+            teal: 'rgba(20, 184, 166, 0.8)',
+        };
+        const doughnutColors = [
+            'rgba(59, 130, 246, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(249, 115, 22, 0.8)',
+            'rgba(139, 92, 246, 0.8)', 'rgba(239, 68, 68, 0.8)', 'rgba(20, 184, 166, 0.8)',
+            'rgba(99, 102, 241, 0.8)',
+        ];
+
+        chartInstances.daily = new Chart(document.getElementById('dailyChart'), {
+            type: 'bar',
+            data: {
+                labels: dailyLabels,
+                datasets: [{ label: 'Visitors', data: dailyData, backgroundColor: colors.blue, borderRadius: 6 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+
+        chartInstances.hourly = new Chart(document.getElementById('hourlyChart'), {
+            type: 'line',
+            data: {
+                labels: hourlyLabels,
+                datasets: [{ label: 'Check-ins', data: hourlyData, borderColor: colors.green, backgroundColor: colors.greenBg, fill: true, tension: 0.4, pointRadius: 3 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+
+        chartInstances.topVisitors = new Chart(document.getElementById('topVisitorsChart'), {
+            type: 'bar',
+            data: {
+                labels: topLabels,
+                datasets: [{ label: 'Visits', data: topData, backgroundColor: colors.purple, borderRadius: 6 }]
+            },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+
+        chartInstances.dow = new Chart(document.getElementById('dowChart'), {
+            type: 'doughnut',
+            data: {
+                labels: dowLabels,
+                datasets: [{ data: dowData, backgroundColor: doughnutColors, borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } } }
+        });
+
+        chartInstances.duration = new Chart(document.getElementById('durationChart'), {
+            type: 'bar',
+            data: {
+                labels: avgDurationLabels,
+                datasets: [{ label: 'Avg Minutes', data: avgDurationData, backgroundColor: colors.teal, borderRadius: 6 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+</script>
+{% endblock %}
