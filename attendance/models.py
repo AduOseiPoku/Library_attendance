@@ -8,6 +8,7 @@ class AttendanceLog(models.Model):
 
     identifier = models.CharField(max_length=100)
     student_name = models.CharField(max_length=150, null=True, blank=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
     timestamp_in = models.DateTimeField(auto_now_add=True)
     timestamp_out = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')

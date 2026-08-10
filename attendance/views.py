@@ -26,10 +26,11 @@ def checkin(request):
     if request.method == 'POST':
         identifier = request.POST.get('student_id', '').strip()
         student_name = request.POST.get('student_name', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
         force_checkin = request.POST.get('force_checkin', '')
         
-        if not identifier or not student_name:
-            messages.error(request, "Please enter both your Student ID and your Name.")
+        if not identifier or not student_name or not phone_number:
+            messages.error(request, "Please enter your Student ID, Name, and Phone Number.")
             return render(request, 'attendance/home.html', {
                 'status': 'error',
                 'active_logs': AttendanceLog.objects.filter(status='Active'),
@@ -67,6 +68,7 @@ def checkin(request):
                 'conflict_type': 'id',
                 'entered_id': identifier,
                 'entered_name': student_name,
+                'entered_phone': phone_number,
                 'active_logs': AttendanceLog.objects.filter(status='Active'),
             })
 
@@ -83,11 +85,23 @@ def checkin(request):
                 'conflict_type': 'name',
                 'entered_id': identifier,
                 'entered_name': student_name,
+                'entered_phone': phone_number,
                 'active_logs': AttendanceLog.objects.filter(status='Active'),
             })
 
-        AttendanceLog.objects.create(identifier=identifier, student_name=student_name, status='Active')
-        return render(request, 'attendance/home.html', {'status': 'checkin', 'identifier': student_name})
+        AttendanceLog.objects.create(
+            identifier=identifier,
+            student_name=student_name,
+            phone_number=phone_number,
+            status='Active'
+        )
+        return render(request, 'attendance/home.html', {
+            'status': 'checkin',
+            'identifier': student_name,
+            'checkin_id': identifier,
+            'checkin_name': student_name,
+            'checkin_phone': phone_number,
+        })
     
     return redirect('home')
 
@@ -300,7 +314,7 @@ def export_csv(request):
     response['Content-Disposition'] = f'attachment; filename="library_logs_{timezone.now().strftime("%Y%m%d")}.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['Log ID', 'Student ID', 'Student Name', 'Time In', 'Time Out', 'Status'])
+    writer.writerow(['Log ID', 'Student ID', 'Student Name', 'Phone Number', 'Time In', 'Time Out', 'Status'])
 
     logs = AttendanceLog.objects.all().order_by('-timestamp_in')
     for log in logs:
@@ -308,6 +322,7 @@ def export_csv(request):
             log.id,
             log.identifier,
             log.student_name,
+            log.phone_number or '',
             log.timestamp_in.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp_in else '',
             log.timestamp_out.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp_out else '',
             log.status,

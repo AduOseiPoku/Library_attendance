@@ -73,6 +73,7 @@
                     <thead>
                         <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
                             <th class="p-4 border-b">Identifier</th>
+                            <th class="p-4 border-b">Phone Number</th>
                             <th class="p-4 border-b">Time In</th>
                             <th class="p-4 border-b text-right">Action</th>
                         </tr>
@@ -81,6 +82,7 @@
                         {% for log in active_logs %}
                         <tr class="hover:bg-gray-50 border-b">
                             <td class="p-4 font-medium">{% if log.student_name %}{{ log.student_name }} ({{ log.identifier }}){% else %}{{ log.identifier }}{% endif %}</td>
+                            <td class="p-4">{{ log.phone_number|default:"-" }}</td>
                             <td class="p-4">{{ log.timestamp_in|date:"M d, Y h:i A" }}</td>
                             <td class="p-4 text-right">
                                 <form method="POST" action="{% url 'dashboard' %}" class="inline">
@@ -116,6 +118,7 @@
                     <thead>
                         <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
                             <th class="p-4 border-b">Identifier</th>
+                            <th class="p-4 border-b">Phone Number</th>
                             <th class="p-4 border-b">Time In</th>
                             <th class="p-4 border-b">Time Out</th>
                         </tr>
@@ -124,6 +127,7 @@
                         {% for log in historical_logs %}
                         <tr class="hover:bg-gray-50 border-b">
                             <td class="p-4 font-medium">{% if log.student_name %}{{ log.student_name }} ({{ log.identifier }}){% else %}{{ log.identifier }}{% endif %}</td>
+                            <td class="p-4">{{ log.phone_number|default:"-" }}</td>
                             <td class="p-4">{{ log.timestamp_in|date:"M d, Y h:i A" }}</td>
                             <td class="p-4">{{ log.timestamp_out|date:"M d, Y h:i A" }}</td>
                         </tr>

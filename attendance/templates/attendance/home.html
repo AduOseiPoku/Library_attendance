@@ -5,6 +5,11 @@
 
     {% if status == 'checkin' %}
     <!-- ✅ Check-In Success Screen -->
+    <script>
+        localStorage.setItem('student_id', '{{ checkin_id }}');
+        localStorage.setItem('student_name', '{{ checkin_name }}');
+        localStorage.setItem('phone_number', '{{ checkin_phone }}');
+    </script>
     <div class="mb-6 flex justify-center text-green-500">
         <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -81,6 +86,7 @@
             {% csrf_token %}
             <input type="hidden" name="student_id" value="{{ entered_id }}">
             <input type="hidden" name="student_name" value="{{ entered_name }}">
+            <input type="hidden" name="phone_number" value="{{ entered_phone }}">
             <input type="hidden" name="force_checkin" value="yes">
             <button type="submit"
                 class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 shadow-md">
@@ -96,7 +102,7 @@
 
     <div class="space-y-4">
         {% if is_open %}
-        <button onclick="document.getElementById('checkin-section').classList.remove('hidden'); document.getElementById('choice-section').classList.add('hidden');"
+        <button onclick="showCheckinPage()"
             class="w-full bg-green-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-green-700 transition duration-200 shadow-md text-lg flex items-center justify-center gap-3">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
@@ -126,29 +132,65 @@
 <!-- ================================================ -->
 <!-- CHECK-IN FORM (Hidden by default, shown via JS) -->
 <!-- ================================================ -->
-<div id="checkin-section" class="hidden w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">Check In</h2>
-    <form method="POST" action="{% url 'checkin' %}" class="space-y-5">
-        {% csrf_token %}
-        <div>
-            <label for="student_id" class="block text-left text-sm font-medium text-gray-700 mb-1">Student ID</label>
-            <input type="text" id="student_id" name="student_id" required autofocus
-                minlength="8" maxlength="8" pattern="\d{8}" title="Student ID must be exactly 8 digits"
-                oninput="this.value = this.value.replace(/[^0-9]/g, '');"
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-center tracking-widest placeholder-gray-400"
-                placeholder="e.g. 20952040">
+<div id="checkin-section" class="hidden w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center animate-fade-in">
+    <!-- Welcome Back Screen (Dynamically shown via JS) -->
+    <div id="welcome-back-section" class="hidden space-y-6">
+        <h2 class="text-2xl font-bold text-gray-800">Welcome Back!</h2>
+        <p class="text-gray-600 text-lg">Are you <strong id="welcome-student-name" class="text-green-600"></strong>?</p>
+        <div class="bg-gray-50 p-4 rounded-xl text-sm text-gray-500 space-y-1">
+            <p><strong>Student ID:</strong> <span id="welcome-student-id"></span></p>
+            <p><strong>Phone Number:</strong> <span id="welcome-phone-number"></span></p>
         </div>
-        <div>
-            <label for="student_name" class="block text-left text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input type="text" id="student_name" name="student_name" required
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-center placeholder-gray-400"
-                placeholder="e.g. John Doe">
-        </div>
-        <button type="submit"
-            class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 shadow-md">
-            Confirm Check In
+        
+        <form method="POST" action="{% url 'checkin' %}" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" id="welcome_input_id" name="student_id">
+            <input type="hidden" id="welcome_input_name" name="student_name">
+            <input type="hidden" id="welcome_input_phone" name="phone_number">
+            
+            <button type="submit"
+                class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 shadow-md">
+                Yes, Check Me In
+            </button>
+        </form>
+        
+        <button onclick="clearSavedStudent()"
+            class="text-sm text-red-500 hover:text-red-700 underline block w-full text-center">
+            No, check in as someone else
         </button>
-    </form>
+    </div>
+
+    <!-- Standard Check In Form -->
+    <div id="standard-checkin-section">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Check In</h2>
+        <form method="POST" action="{% url 'checkin' %}" class="space-y-5">
+            {% csrf_token %}
+            <div>
+                <label for="student_id" class="block text-left text-sm font-medium text-gray-700 mb-1">Student ID</label>
+                <input type="text" id="student_id" name="student_id" required autofocus
+                    minlength="8" maxlength="8" pattern="\d{8}" title="Student ID must be exactly 8 digits"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-center tracking-widest placeholder-gray-400"
+                    placeholder="e.g. 20952040">
+            </div>
+            <div>
+                <label for="student_name" class="block text-left text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input type="text" id="student_name" name="student_name" required
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-center placeholder-gray-400"
+                    placeholder="e.g. John Doe">
+            </div>
+            <div>
+                <label for="phone_number" class="block text-left text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input type="text" id="phone_number" name="phone_number" required
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg text-center placeholder-gray-400"
+                    placeholder="e.g. +1234567890">
+            </div>
+            <button type="submit"
+                class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 shadow-md">
+                Confirm Check In
+            </button>
+        </form>
+    </div>
     <button onclick="document.getElementById('checkin-section').classList.add('hidden'); document.getElementById('choice-section').classList.remove('hidden');"
         class="mt-4 text-sm text-gray-500 hover:text-gray-800 underline">← Back</button>
 </div>
@@ -256,5 +298,45 @@
     document.getElementById('checkout-modal').addEventListener('click', function (e) {
         if (e.target === this) closeModal();
     });
+
+    // Checkin page routing/logic using LocalStorage
+    function showCheckinPage() {
+        document.getElementById('choice-section').classList.add('hidden');
+        document.getElementById('checkin-section').classList.remove('hidden');
+
+        const savedId = localStorage.getItem('student_id');
+        const savedName = localStorage.getItem('student_name');
+        const savedPhone = localStorage.getItem('phone_number');
+
+        if (savedId && savedName && savedPhone) {
+            // Fill details on the welcome back screen
+            document.getElementById('welcome-student-name').textContent = savedName;
+            document.getElementById('welcome-student-id').textContent = savedId;
+            document.getElementById('welcome-phone-number').textContent = savedPhone;
+
+            // Pre-fill hidden inputs in the welcome check-in form
+            document.getElementById('welcome_input_id').value = savedId;
+            document.getElementById('welcome_input_name').value = savedName;
+            document.getElementById('welcome_input_phone').value = savedPhone;
+
+            // Show welcome-back section, hide standard section
+            document.getElementById('welcome-back-section').classList.remove('hidden');
+            document.getElementById('standard-checkin-section').classList.add('hidden');
+        } else {
+            // Show standard section, hide welcome back section
+            document.getElementById('welcome-back-section').classList.add('hidden');
+            document.getElementById('standard-checkin-section').classList.remove('hidden');
+        }
+    }
+
+    function clearSavedStudent() {
+        localStorage.removeItem('student_id');
+        localStorage.removeItem('student_name');
+        localStorage.removeItem('phone_number');
+        
+        // Switch to the standard form view
+        document.getElementById('welcome-back-section').classList.add('hidden');
+        document.getElementById('standard-checkin-section').classList.remove('hidden');
+    }
 </script>
 {% endblock %}
