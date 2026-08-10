@@ -211,6 +211,7 @@
         {% if active_logs %}
             {% for log in active_logs %}
             <button type="button" onclick="openModal('{{ log.student_name }}', '{{ log.identifier }}', '{{ log.id }}')"
+                data-student-id="{{ log.identifier }}" data-log-id="{{ log.id }}"
                 class="student-card w-full text-left bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-400 rounded-xl px-5 py-4 transition duration-200 flex justify-between items-center group">
                 <div>
                     <p class="font-semibold text-gray-800 group-hover:text-blue-700 student-name">{{ log.student_name }}</p>
@@ -264,11 +265,32 @@
 
 <!-- Wrap the choice buttons so JS can toggle them -->
 <script>
-    // Wrap the main choice section
+    // Wrap the main choice section and handle auto-routing
     document.addEventListener('DOMContentLoaded', function () {
         const mainCard = document.querySelector('.w-full.max-w-md.bg-white');
         if (mainCard && !mainCard.id) {
             mainCard.id = 'choice-section';
+        }
+
+        // If we are showing a success/error status screen, do not auto-redirect
+        const currentStatus = "{{ status }}";
+        if (currentStatus) return;
+
+        // Check if student has saved credentials
+        const savedId = localStorage.getItem('student_id');
+        const savedName = localStorage.getItem('student_name');
+
+        if (savedId && savedName) {
+            // Check if the student is currently active (checked in)
+            const activeCard = document.querySelector(`.student-card[data-student-id="${savedId}"]`);
+            if (activeCard) {
+                // Already checked in: open check-out confirmation modal immediately
+                const logId = activeCard.getAttribute('data-log-id');
+                openModal(savedName, savedId, logId);
+            } else {
+                // Not checked in: automatically open the check-in welcome screen
+                showCheckinPage();
+            }
         }
     });
 
